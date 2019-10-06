@@ -1,7 +1,8 @@
 import * as Yup from "yup";
 import { startOfHour, parseISO, isBefore } from "date-fns";
-import Appointment from "../models/Appointment";
+import File from "../models/File";
 import User from "../models/User";
+import Appointment from "../models/Appointment";
 
 class AppointmentContrloller {
   async index(req, res) {
@@ -13,7 +14,14 @@ class AppointmentContrloller {
         {
           model: User,
           as: "provider",
-          attributes: ["id", "name"]
+          attributes: ["id", "name"],
+          include: [
+            {
+              model: File,
+              as: "avatar",
+              attributes: ["id", "path", "url"]
+            }
+          ]
         }
       ]
     });
