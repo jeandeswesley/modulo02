@@ -14,6 +14,7 @@ class Mail {
       secure,
       auth: auth.user ? auth : null
     });
+
     this.configureTemplates();
   }
 
@@ -23,14 +24,14 @@ class Mail {
     this.transporter.use(
       "compile",
       nodemailerhbs({
-        viewEngime: exphbs.create({
+        viewEngine: exphbs.create({
           layoutsDir: resolve(viewPath, "layouts"),
           partialsDir: resolve(viewPath, "partials"),
           defaultLayout: "default",
           extname: ".hbs"
         }),
         viewPath,
-        extName: "hbs"
+        extName: ".hbs"
       })
     );
   }

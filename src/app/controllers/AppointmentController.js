@@ -150,6 +150,8 @@ class AppointmentContrloller {
       });
     }
 
+    // Valida cancelamento 2 horas do agendamento
+
     const dateWithSub = subHours(appointment.date, 2);
 
     if (isBefore(dateWithSub, new Date())) {
@@ -165,7 +167,7 @@ class AppointmentContrloller {
     await Mail.sendMail({
       to: `${appointment.provider.name} <${appointment.provider.email}>`,
       subject: "Agendamento Cancelado",
-      template: "cancellation",
+      template: "cancellation",
       context: {
         provider: appointment.provider.name,
         user: appointment.user.name,
