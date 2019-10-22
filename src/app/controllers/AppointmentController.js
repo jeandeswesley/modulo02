@@ -1,13 +1,13 @@
-import * as Yup from "yup";
-import { startOfHour, parseISO, isBefore, format, subHours } from "date-fns";
-import pt from "date-fns/locale/pt";
-import File from "../models/File";
-import User from "../models/User";
-import Appointment from "../models/Appointment";
-import Notification from "../schemas/Notification";
+import * as Yup from 'yup';
+import { startOfHour, parseISO, isBefore, format, subHours } from 'date-fns';
+import pt from 'date-fns/locale/pt';
+import File from '../models/File';
+import User from '../models/User';
+import Appointment from '../models/Appointment';
+import Notification from '../schemas/Notification';
 
-import CancellationMail from "../jobs/CancellationMail";
-import Queue from "../../lib/Queue";
+import CancellationMail from '../jobs/CancellationMail';
+import Queue from '../../lib/Queue';
 
 class AppointmentContrloller {
   async index(req, res) {
@@ -15,24 +15,24 @@ class AppointmentContrloller {
 
     const appointments = await Appointment.findAll({
       where: { user_id: req.userId, canceled_at: null },
-      order: ["date"],
+      order: ['date'],
       limit: 20,
       offset: (page - 1) * 20,
-      attributes: ["id", "date"],
+      attributes: ['id', 'date', 'past', 'cancelable'],
       include: [
         {
           model: User,
-          as: "provider",
-          attributes: ["id", "name"],
+          as: 'provider',
+          attributes: ['id', 'name'],
           include: [
             {
               model: File,
-              as: "avatar",
-              attributes: ["id", "path", "url"]
-            }
-          ]
-        }
-      ]
+              as: 'avatar',
+              attributes: ['id', 'path', 'url'],
+            },
+          ],
+        },
+      ],
     });
 
     return res.json(appointments);
@@ -41,11 +41,11 @@ class AppointmentContrloller {
   async store(req, res) {
     const schema = Yup.object().shape({
       provider_id: Yup.number().required(),
-      date: Yup.date().required()
+      date: Yup.date().required(),
     });
 
     if (!(await schema.isValid(req.body))) {
-      return res.status(400).json({ error: "Validation fails" });
+      return res.status(400).json({ error: 'Validation fails' });
     }
 
     const { provider_id, date } = req.body;
@@ -70,13 +70,13 @@ class AppointmentContrloller {
      * Check if provider_id is a provider
      */
     const isProvider = await User.findOne({
-      where: { id: provider_id, provider: true }
+      where: { id: provider_id, provider: true },
     });
 
     if (!isProvider) {
       return res
         .status(401)
-        .json({ error: "You can only create appointments with providers" });
+        .json({ error: 'You can only create appointments with providers' });
     }
 
     /**
@@ -85,7 +85,7 @@ class AppointmentContrloller {
     const hourStart = startOfHour(parseISO(date));
 
     if (isBefore(hourStart, new Date())) {
-      return res.status(400).json({ error: "Paste dates are not permited" });
+      return res.status(400).json({ error: 'Paste dates are not permited' });
     }
 
     /**
@@ -96,20 +96,20 @@ class AppointmentContrloller {
       where: {
         provider_id,
         canceled_at: null,
-        date: hourStart
-      }
+        date: hourStart,
+      },
     });
 
     if (checkAvailability) {
       return res
         .status(400)
-        .json({ error: "Appointment date is not available" });
+        .json({ error: 'Appointment date is not available' });
     }
 
     const appointment = await Appointment.create({
       user_id: req.userId,
       provider_id,
-      date
+      date,
     });
     /**
      *
@@ -118,12 +118,12 @@ class AppointmentContrloller {
 
     const user = await User.findByPk(req.userId);
     const formattedate = format(hourStart, "'dia' dd 'de' MMMM', às' H:mm'h'", {
-      locale: pt
+      locale: pt,
     });
 
     await Notification.create({
       content: `Novo agendamento de ${user.name} para ${formattedate}`,
-      user: provider_id
+      user: provider_id,
     });
 
     return res.json(appointment);
@@ -134,20 +134,20 @@ class AppointmentContrloller {
       include: [
         {
           model: User,
-          as: "provider",
-          attributes: ["name", "email"]
+          as: 'provider',
+          attributes: ['name', 'email'],
         },
         {
           model: User,
-          as: "user",
-          attributes: ["name"]
-        }
-      ]
+          as: 'user',
+          attributes: ['name'],
+        },
+      ],
     });
 
     if (appointment.user_id !== req.userId) {
       return res.status(401).json({
-        error: "You don't have permission to cancel this appointment"
+        error: "You don't have permission to cancel this appointment",
       });
     }
 
@@ -157,7 +157,7 @@ class AppointmentContrloller {
 
     if (isBefore(dateWithSub, new Date())) {
       return res.status(401).json({
-        error: "You can only cancel appointment cancel 2 hours in advanced."
+        error: 'You can only cancel appointment cancel 2 hours in advanced.',
       });
     }
 
@@ -166,7 +166,7 @@ class AppointmentContrloller {
     await appointment.save();
 
     await Queue.add(CancellationMail.key, {
-      appointment
+      appointment,
     });
 
     return res.json(appointment);
